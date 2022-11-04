@@ -1,11 +1,11 @@
 resource "aws_s3_bucket" "redirect" {
-  count = var.create_redirect ? 1 : 0
+  count = var.create_redirect || var.create_redirect_302 ? 1 : 0
   bucket = var.rf_source_bucket
   force_destroy = true
 }
 
 resource "aws_s3_bucket_policy" "redirect" {
-  count = var.create_redirect ? 1 : 0
+  count = var.create_redirect || var.create_redirect_302 ? 1 : 0
   bucket = aws_s3_bucket.redirect[count.index].bucket
   policy = <<EOF
 {
@@ -23,13 +23,13 @@ EOF
 }
 
 resource "aws_s3_bucket_acl" "redirect" {
-  count = var.create_redirect ? 1 : 0
+  count = var.create_redirect || var.create_redirect_302 ? 1 : 0
   bucket = aws_s3_bucket.redirect[count.index].bucket
   acl = "public-read"
 }
 
 resource "aws_s3_bucket_lifecycle_configuration" "redirect" {
-  count = var.create_redirect ? 1 : 0
+  count = var.create_redirect || var.create_redirect_302 ? 1 : 0
   bucket = aws_s3_bucket.redirect[count.index].bucket
   rule {
     id = var.rf_source_bucket
@@ -49,10 +49,40 @@ resource "aws_s3_bucket_website_configuration" "redirect" {
   }
 }
 
+resource "aws_s3_bucket_website_configuration" "redirect_302" {
+  count = var.create_redirect_302 ? 1 : 0
+  bucket = aws_s3_bucket.redirect[count.index].bucket
+  index_document {
+    # suffix = "index.html"
+    suffix = var.website.index_document
+  }
+  routing_rule {
+    
+    dynamic "condition" {
+      for_each = try([var.redirect_302["conditions"]], [])
+      content {
+        http_error_code_returned_equals = condition.value.http_error_code_returned_equals
+        key_prefix_equals = condition.value.key_prefix_equals
+      }
+    }
+
+    dynamic "redirect" {
+      for_each = try([var.redirect_302["redirect"]], [])
+      content {
+        host_name = try(redirect.value.host_name, var.app_domain_name)
+        http_redirect_code = redirect.value.http_redirect_code
+        protocol = redirect.value.protocol
+        replace_key_prefix_with = redirect.value.replace_key_prefix_with
+        replace_key_with = redirect.value.replace_key_with
+      }
+    }
+  }
+}
+
 resource "aws_cloudfront_distribution" "s3_distribution_redirect" {
-  count = var.create_redirect ? 1 : 0
+  count = var.create_redirect || var.create_redirect_302 ? 1 : 0
   origin {
-    domain_name = aws_s3_bucket_website_configuration.redirect[0].website_endpoint
+    domain_name = try(aws_s3_bucket_website_configuration.redirect[0].website_endpoint, aws_s3_bucket_website_configuration.redirect_302[0].website_endpoint)
     origin_id   = "${var.s3_origin_id}Redir"
     custom_origin_config {
       http_port              = "80"
@@ -100,15 +130,15 @@ resource "aws_cloudfront_distribution" "s3_distribution_redirect" {
     dynamic "geo_restriction" {
       for_each = var.geo_restriction ? [] : [1]
       content {
-         restriction_type = "none"
+        restriction_type = "none"
       }
     }
 
     dynamic "geo_restriction" {
       for_each = var.geo_restriction ? [1] : []
       content {
-         restriction_type = "whitelist"
-         locations        = var.restriction_locations
+        restriction_type = "whitelist"
+        locations        = var.restriction_locations
       }
     }
 
@@ -123,7 +153,7 @@ resource "aws_cloudfront_distribution" "s3_distribution_redirect" {
 }
 
 resource "aws_route53_record" "web_record_redirect" {
-  count = var.create_redirect ? 1 : 0
+  count = var.create_redirect || var.create_redirect_302 ? 1 : 0
   zone_id = var.zone_id # Replace with your zone ID
   name    = "${var.rf_domain_name}."                    # Replace with your name/domain/subdomain
   type    = "A"
