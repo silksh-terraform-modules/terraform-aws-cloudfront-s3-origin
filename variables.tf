@@ -80,24 +80,11 @@ variable "create_redirect" {
   description = "will we create redirection (for ex. from www to non-www)"
 }
 
-variable "create_redirect_302" {
-  default = false
-  type = bool
-  description = "will we create redirection 302 to another domain or path"
-}
-
-variable "redirect_302" {
+variable "create_redirect_content" {
   default = {
-    conditions = {
-      key_prefix_equals = ""
-      http_error_code_returned_equals = ""
-    }
-    redirect = {
+    redirect_all_requests_to = {
       # host_name = "example.com" # default to var.app_domain_name
-      http_redirect_code = "302"
       protocol = "https"
-      replace_key_prefix_with = ""
-      replace_key_with = ""
     }
   }
 }

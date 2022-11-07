@@ -52,6 +52,12 @@ module "cloudfront_app_example" {
   create_redirect = true
   rf_source_bucket = "www.example.${var.tld}"
   rf_domain_name = "www.example.${var.tld}"
+  # same as website
+  create_redirect_content = {  
+    redirect_all_requests_to = {
+      protocol = "https"
+    }
+  }
 
   function_association = [{
       event_type   = "viewer-request"
