@@ -1,10 +1,6 @@
 resource "aws_s3_bucket" "b" {
   bucket = var.source_bucket
-  force_destroy = true
-}
-
-resource "aws_s3_bucket_policy" "b" {
-  bucket = aws_s3_bucket.b.bucket
+  acl    = "public-read"
   policy = <<EOF
 {
   "Version":"2012-10-17",
@@ -18,79 +14,28 @@ resource "aws_s3_bucket_policy" "b" {
   ]
 }
 EOF
-}
 
-resource "aws_s3_bucket_acl" "b" {
-  bucket = aws_s3_bucket.b.bucket
-  acl = "public-read"
-}
+  force_destroy = true
 
-resource "aws_s3_bucket_lifecycle_configuration" "b" {
-  bucket = aws_s3_bucket.b.bucket
-  rule {
-    id = var.source_bucket
-    status = "Enabled"
-    noncurrent_version_expiration {
-      noncurrent_days = 90
-    }
-  }
-}
+  website {
+    index_document = var.website["index_document"]
+    error_document = var.website["error_document"]
 
-resource "aws_s3_bucket_website_configuration" "b" {
-  bucket = aws_s3_bucket.b.bucket
-  
-  dynamic "index_document" {
-    for_each = try([var.website["index_document"]], [])
-
-    content {
-      suffix = index_document.value
-    }
+    routing_rules = var.routing_rules
   }
 
-  dynamic "error_document" {
-    for_each = try([var.website["error_document"]], [])
+  lifecycle_rule {
+        enabled = true
 
-    content {
-      key = error_document.value
-    }
-  }
-
-  dynamic "redirect_all_requests_to" {
-    for_each = try([var.website["redirect_all_requests_to"]], [])
-
-    content {
-      host_name = redirect_all_requests_to.value.host_name
-      protocol  = try(redirect_all_requests_to.value.protocol, null)
-    }
-  }
-
-  dynamic "routing_rule" {
-    for_each = try(flatten([var.website["routing_rules"]]), [])
-
-    content {
-      dynamic "condition" {
-        for_each = [try([routing_rule.value.condition], [])]
-
-        content {
-          http_error_code_returned_equals = try(routing_rule.value.condition["http_error_code_returned_equals"], null)
-          key_prefix_equals               = try(routing_rule.value.condition["key_prefix_equals"], null)
+        noncurrent_version_expiration {
+            days = 90
         }
-      }
-
-      redirect {
-        host_name               = try(routing_rule.value.redirect["host_name"], null)
-        http_redirect_code      = try(routing_rule.value.redirect["http_redirect_code"], null)
-        protocol                = try(routing_rule.value.redirect["protocol"], null)
-        replace_key_prefix_with = try(routing_rule.value.redirect["replace_key_prefix_with"], null)
-        replace_key_with        = try(routing_rule.value.redirect["replace_key_with"], null)
-      }
-    }
   }
 }
 
 resource "aws_cloudfront_distribution" "s3_distribution" {
   origin {
-    domain_name = aws_s3_bucket_website_configuration.b.website_endpoint
+    domain_name = aws_s3_bucket.b.website_endpoint
     origin_id   = var.s3_origin_id
     custom_origin_config {
       http_port              = "80"
