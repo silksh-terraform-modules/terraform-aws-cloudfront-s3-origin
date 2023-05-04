@@ -43,9 +43,53 @@ resource "aws_s3_bucket_lifecycle_configuration" "redirect" {
 resource "aws_s3_bucket_website_configuration" "redirect" {
   count = var.create_redirect ? 1 : 0
   bucket = aws_s3_bucket.redirect[count.index].bucket
-  redirect_all_requests_to {
-    host_name = var.app_domain_name
-    protocol = "https"
+
+    dynamic "redirect_all_requests_to" {
+    for_each = try([var.create_redirect_content["redirect_all_requests_to"]], [])
+    content {
+      host_name = try(redirect_all_requests_to.value.host_name, var.app_domain_name)
+      protocol  = try(redirect_all_requests_to.value.protocol, "https")
+    }
+  }
+
+    dynamic "index_document" {
+    for_each = try([var.create_redirect_content["index_document"]], [])
+    content {
+      suffix = index_document.value
+    }
+  }
+
+  dynamic "error_document" {
+    for_each = try([var.create_redirect_content["error_document"]], [])
+    content {
+      key = error_document.value
+    }
+  }
+
+
+  dynamic "routing_rule" {
+    for_each = try(flatten([var.create_redirect_content["routing_rules"]]), [])
+
+    content {
+      dynamic "condition" {
+        for_each = [try([routing_rule.value.condition], [])]
+        content {
+          http_error_code_returned_equals = try(routing_rule.value.condition["http_error_code_returned_equals"], null)
+          key_prefix_equals               = try(routing_rule.value.condition["key_prefix_equals"], null)
+        }
+      }
+
+      dynamic "redirect" {
+        for_each = [try([routing_rule.value.redirect], [])]
+        content {
+          host_name               = try(routing_rule.value.redirect["host_name"], var.app_domain_name)
+          http_redirect_code      = try(routing_rule.value.redirect["http_redirect_code"], null)
+          protocol                = try(routing_rule.value.redirect["protocol"], "https")
+          replace_key_prefix_with = try(routing_rule.value.redirect["replace_key_prefix_with"], null)
+          replace_key_with        = try(routing_rule.value.redirect["replace_key_with"], null)
+        }
+      }
+    }
   }
 }
 
@@ -100,15 +144,15 @@ resource "aws_cloudfront_distribution" "s3_distribution_redirect" {
     dynamic "geo_restriction" {
       for_each = var.geo_restriction ? [] : [1]
       content {
-         restriction_type = "none"
+        restriction_type = "none"
       }
     }
 
     dynamic "geo_restriction" {
       for_each = var.geo_restriction ? [1] : []
       content {
-         restriction_type = "whitelist"
-         locations        = var.restriction_locations
+        restriction_type = "whitelist"
+        locations        = var.restriction_locations
       }
     }
 

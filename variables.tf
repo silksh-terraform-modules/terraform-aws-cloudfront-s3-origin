@@ -80,6 +80,15 @@ variable "create_redirect" {
   description = "will we create redirection (for ex. from www to non-www)"
 }
 
+variable "create_redirect_content" {
+  # default = {
+  #   redirect_all_requests_to = {
+  #     # host_name = "example.com" # default to var.app_domain_name
+  #     protocol = "https"
+  #   }
+  # }
+}
+
 variable "rf_source_bucket" {
   default = ""
 }
