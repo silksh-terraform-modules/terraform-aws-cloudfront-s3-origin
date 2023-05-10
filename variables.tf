@@ -81,6 +81,7 @@ variable "create_redirect" {
 }
 
 variable "create_redirect_content" {
+  default = null
   # default = {
   #   redirect_all_requests_to = {
   #     # host_name = "example.com" # default to var.app_domain_name
