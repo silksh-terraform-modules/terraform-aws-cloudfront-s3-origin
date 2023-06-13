@@ -118,3 +118,7 @@ variable "function_association" {
 variable "response_headers_policy_id" {
   default = ""
 }
+
+variable "web_acl_id" {
+  default = ""
+}
