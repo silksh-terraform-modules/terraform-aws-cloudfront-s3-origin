@@ -81,12 +81,12 @@ variable "create_redirect" {
 }
 
 variable "create_redirect_content" {
-  # default = {
-  #   redirect_all_requests_to = {
-  #     # host_name = "example.com" # default to var.app_domain_name
-  #     protocol = "https"
-  #   }
-  # }
+  default = {
+    redirect_all_requests_to = {
+      # host_name = "example.com" # default to var.app_domain_name
+      protocol = "https"
+    }
+  }
 }
 
 variable "rf_source_bucket" {
