@@ -128,6 +128,18 @@ variable "response_headers_policy_id" {
   default = ""
 }
 
+variable "cache_policy_id" {
+  default = ""
+}
+
+variable "request_policy_id" {
+  default = ""
+}
+
 variable "web_acl_id" {
   default = ""
+}
+
+variable "custom_error_response_code" {
+  default = 200
 }
