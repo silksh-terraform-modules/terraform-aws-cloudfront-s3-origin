@@ -147,7 +147,7 @@ resource "aws_cloudfront_distribution" "s3_distribution" {
   custom_error_response {
     error_caching_min_ttl = 60
     error_code            = 404
-    response_code         = 200
+    response_code         = "${var.custom_error_response_code}"
     response_page_path    = "${var.custom_error_index_document}"
   }
 
@@ -163,13 +163,19 @@ resource "aws_cloudfront_distribution" "s3_distribution" {
     allowed_methods  = ["DELETE", "GET", "HEAD", "OPTIONS", "PATCH", "POST", "PUT"]
     cached_methods   = ["GET", "HEAD"]
     target_origin_id = var.s3_origin_id
-    response_headers_policy_id = length(var.response_headers_policy_id) > 0 ? var.response_headers_policy_id : ""
+    
+    response_headers_policy_id = var.response_headers_policy_id
+    cache_policy_id = var.cache_policy_id
+    origin_request_policy_id = var.request_policy_id
 
-    forwarded_values {
-      query_string = false
+    dynamic "forwarded_values" {
+      for_each = length(var.cache_policy_id) > 0 ? [] : [1]
+      content {
+        query_string = false
 
-      cookies {
-        forward = "none"
+        cookies {
+          forward = "none"
+        }
       }
     }
 
@@ -203,15 +209,15 @@ resource "aws_cloudfront_distribution" "s3_distribution" {
     dynamic "geo_restriction" {
       for_each = var.geo_restriction ? [] : [1]
       content {
-         restriction_type = "none"
+        restriction_type = "none"
       }
     }
 
     dynamic "geo_restriction" {
       for_each = var.geo_restriction ? [1] : []
       content {
-         restriction_type = "whitelist"
-         locations        = var.restriction_locations
+        restriction_type = "whitelist"
+        locations        = var.restriction_locations
       }
     }
 
