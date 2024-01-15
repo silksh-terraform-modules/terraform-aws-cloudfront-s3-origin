@@ -143,3 +143,7 @@ variable "web_acl_id" {
 variable "custom_error_response_code" {
   default = 200
 }
+
+variable "enabled" {
+  default = true
+}
