@@ -131,7 +131,8 @@ resource "aws_cloudfront_distribution" "s3_distribution" {
     }
   }
 
-  enabled             = true
+  # enabled             = true
+  enabled             = var.enabled
   is_ipv6_enabled     = true
   comment             = var.comment
   web_acl_id          = var.web_acl_id
