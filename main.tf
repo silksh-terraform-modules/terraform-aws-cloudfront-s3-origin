@@ -211,6 +211,7 @@ resource "aws_cloudfront_distribution" "s3_distribution" {
       for_each = var.geo_restriction ? [] : [1]
       content {
         restriction_type = "none"
+        locations        = []
       }
     }
 
