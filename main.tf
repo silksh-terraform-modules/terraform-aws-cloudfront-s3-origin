@@ -158,7 +158,7 @@ resource "aws_cloudfront_distribution" "s3_distribution" {
     prefix          = var.source_bucket
   }
 
-  aliases = [var.app_domain_name]
+  aliases = concat([var.app_domain_name], var.app_additional_domain_names)
 
   default_cache_behavior {
     allowed_methods  = ["DELETE", "GET", "HEAD", "OPTIONS", "PATCH", "POST", "PUT"]

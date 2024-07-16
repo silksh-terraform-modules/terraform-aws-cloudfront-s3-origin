@@ -26,6 +26,11 @@ variable "app_domain_name" {
   default = ""
 }
 
+variable "app_additional_domain_names" {
+  default = []
+  type = list
+}
+
 variable "min_ttl" {
   default = 0
 }
