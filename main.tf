@@ -10,7 +10,7 @@ resource "aws_cloudfront_origin_access_identity" "oai" {
 
 data "aws_iam_policy_document" "allow_s3_get" {
   statement {
-    sid       = var.secure_s3_origin ? "" : "PublicReadForGetBucketObjects"
+    sid       = var.secure_s3_origin ? "CloudfrontDistributionGetBucketObjects" : "PublicReadForGetBucketObjects"
     effect    = "Allow"
     principals {
       type        = var.secure_s3_origin ? "AWS" : "*"
