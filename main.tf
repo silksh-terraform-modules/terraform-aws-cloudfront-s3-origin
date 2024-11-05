@@ -149,7 +149,7 @@ resource "aws_s3_bucket_website_configuration" "b" {
 
 resource "aws_cloudfront_distribution" "s3_distribution" {
   origin {
-    domain_name = aws_s3_bucket_website_configuration.b.website_endpoint
+    domain_name = var.secure_s3_origin ? aws_s3_bucket_website_configuration.b.bucket_regional_domain_name : aws_s3_bucket_website_configuration.b.website_endpoint
     origin_id   = var.s3_origin_id
 
     dynamic "custom_origin_config" {
