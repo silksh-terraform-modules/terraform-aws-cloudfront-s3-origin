@@ -161,3 +161,32 @@ variable "secure_s3_origin" {
 variable "is_ipv6_enabled" {
   default = true
 }
+
+variable "bucket_block_public_acls" {
+  description = "Specifies whether Amazon S3 blocks public ACLs for this bucket."
+  type        = bool
+  default     = false
+}
+
+variable "bucket_block_public_policy" {
+  description = "Specifies whether Amazon S3 blocks public bucket policies for this bucket."
+  type        = bool
+  default     = false
+}
+
+variable "bucket_ignore_public_acls" {
+  description = "Specifies whether Amazon S3 ignores public ACLs for this bucket."
+  type        = bool
+  default     = false
+}
+
+variable "bucket_restrict_public_buckets" {
+  description = "Specifies whether Amazon S3 restricts public bucket policies for this bucket."
+  type        = bool
+  default     = false
+}
+
+variable "bucket_noncurrent_version_expiration_days" {
+  default = 90
+  
+}

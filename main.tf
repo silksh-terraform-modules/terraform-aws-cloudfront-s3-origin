@@ -31,27 +31,6 @@ resource "aws_s3_bucket_policy" "b_policy" {
   ]
 
 }
-# resource "aws_s3_bucket_policy" "b" {
-#   depends_on = [
-#     aws_s3_bucket_ownership_controls.b,
-#     aws_s3_bucket_public_access_block.b,
-#   ]
-
-#   bucket = aws_s3_bucket.b.bucket
-#   policy = <<EOF
-# {
-#   "Version":"2012-10-17",
-#   "Statement":[{
-#         "Sid":"PublicReadForGetBucketObjects",
-#         "Effect":"Allow",
-#           "Principal": "*",
-#       "Action":["s3:GetObject"],
-#       "Resource":["arn:aws:s3:::${var.source_bucket}/*"]
-#     }
-#   ]
-# }
-# EOF
-# }
 
 resource "aws_s3_bucket_ownership_controls" "b" {
   bucket = aws_s3_bucket.b.id
@@ -63,10 +42,10 @@ resource "aws_s3_bucket_ownership_controls" "b" {
 resource "aws_s3_bucket_public_access_block" "b" {
   bucket = aws_s3_bucket.b.id
 
-  block_public_acls       = false
-  block_public_policy     = false
-  ignore_public_acls      = false
-  restrict_public_buckets = false
+  block_public_acls       = var.bucket_block_public_acls
+  block_public_policy     = var.bucket_block_public_policy
+  ignore_public_acls      = var.bucket_ignore_public_acls
+  restrict_public_buckets = var.bucket_restrict_public_buckets
 
   depends_on = [
     aws_s3_bucket_ownership_controls.b,
@@ -90,7 +69,7 @@ resource "aws_s3_bucket_lifecycle_configuration" "b" {
     id = var.source_bucket
     status = "Enabled"
     noncurrent_version_expiration {
-      noncurrent_days = 90
+      noncurrent_days = var.bucket_noncurrent_version_expiration_days
     }
   }
 }
@@ -171,7 +150,6 @@ resource "aws_cloudfront_distribution" "s3_distribution" {
 
   }
 
-  # enabled             = true
   enabled             = var.enabled
   is_ipv6_enabled     = var.is_ipv6_enabled
   comment             = var.comment
