@@ -3,27 +3,55 @@ resource "aws_s3_bucket" "b" {
   force_destroy = true
 }
 
-resource "aws_s3_bucket_policy" "b" {
+resource "aws_cloudfront_origin_access_identity" "oai" {
+  count   = var.secure_s3_origin ? 1 : 0
+  comment = "Access Identity for CloudFront to access S3 bucket"
+}
+
+data "aws_iam_policy_document" "allow_s3_get" {
+  statement {
+    sid       = var.secure_s3_origin ? "" : "PublicReadForGetBucketObjects"
+    effect    = "Allow"
+    principals {
+      type        = var.secure_s3_origin ? "AWS" : "*"
+      identifiers = var.secure_s3_origin ? [aws_cloudfront_origin_access_identity.oai[0].iam_arn] : ["*"]
+    }
+    actions = ["s3:GetObject"]
+    resources = ["arn:aws:s3:::${var.source_bucket}/*"]
+  }
+}
+
+resource "aws_s3_bucket_policy" "b_policy" {
+  bucket = aws_s3_bucket.b.id
+  policy = data.aws_iam_policy_document.allow_s3_get.json
+
   depends_on = [
     aws_s3_bucket_ownership_controls.b,
     aws_s3_bucket_public_access_block.b,
   ]
 
-  bucket = aws_s3_bucket.b.bucket
-  policy = <<EOF
-{
-  "Version":"2012-10-17",
-  "Statement":[{
-        "Sid":"PublicReadForGetBucketObjects",
-        "Effect":"Allow",
-          "Principal": "*",
-      "Action":["s3:GetObject"],
-      "Resource":["arn:aws:s3:::${var.source_bucket}/*"]
-    }
-  ]
 }
-EOF
-}
+# resource "aws_s3_bucket_policy" "b" {
+#   depends_on = [
+#     aws_s3_bucket_ownership_controls.b,
+#     aws_s3_bucket_public_access_block.b,
+#   ]
+
+#   bucket = aws_s3_bucket.b.bucket
+#   policy = <<EOF
+# {
+#   "Version":"2012-10-17",
+#   "Statement":[{
+#         "Sid":"PublicReadForGetBucketObjects",
+#         "Effect":"Allow",
+#           "Principal": "*",
+#       "Action":["s3:GetObject"],
+#       "Resource":["arn:aws:s3:::${var.source_bucket}/*"]
+#     }
+#   ]
+# }
+# EOF
+# }
 
 resource "aws_s3_bucket_ownership_controls" "b" {
   bucket = aws_s3_bucket.b.id
@@ -48,7 +76,7 @@ resource "aws_s3_bucket_public_access_block" "b" {
 
 resource "aws_s3_bucket_acl" "b" {
   bucket = aws_s3_bucket.b.bucket
-  acl = "public-read"
+  acl = var.secure_s3_origin ? "private" : "public-read"
 
   depends_on = [
     aws_s3_bucket_ownership_controls.b,
@@ -123,17 +151,29 @@ resource "aws_cloudfront_distribution" "s3_distribution" {
   origin {
     domain_name = aws_s3_bucket_website_configuration.b.website_endpoint
     origin_id   = var.s3_origin_id
-    custom_origin_config {
-      http_port              = "80"
-      https_port             = "443"
-      origin_protocol_policy = "http-only"
-      origin_ssl_protocols   = ["TLSv1", "TLSv1.1", "TLSv1.2"]
+
+    dynamic "custom_origin_config" {
+      for_each = var.secure_s3_origin ? [] : [1]
+      content {
+        http_port              = "80"
+        https_port             = "443"
+        origin_protocol_policy = "http-only"
+        origin_ssl_protocols   = ["TLSv1", "TLSv1.1", "TLSv1.2"]
+      }
     }
+
+    dynamic "s3_origin_config" {
+      for_each = var.secure_s3_origin ? [1] : []
+      content {
+        origin_access_identity = aws_cloudfront_origin_access_identity.oai[0].cloudfront_access_identity_path
+      }
+    }
+
   }
 
   # enabled             = true
   enabled             = var.enabled
-  is_ipv6_enabled     = true
+  is_ipv6_enabled     = var.is_ipv6_enabled
   comment             = var.comment
   web_acl_id          = var.web_acl_id
 

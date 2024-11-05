@@ -152,3 +152,12 @@ variable "custom_error_response_code" {
 variable "enabled" {
   default = true
 }
+
+variable "secure_s3_origin" {
+  default = false
+  
+}
+
+variable "is_ipv6_enabled" {
+  default = true
+}
