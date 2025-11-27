@@ -126,6 +126,20 @@ resource "aws_s3_bucket_website_configuration" "b" {
   }
 }
 
+resource "aws_cloudfront_response_headers_policy" "static_assets_cache" {
+  count = length(var.static_assets_cache_ordered_cache_behaviors) > 0 ? 1 : 0
+  
+  name = "${replace(var.source_bucket, ".", "-")}-static-assets-cache"
+
+  custom_headers_config {
+    items {
+      header   = "Cache-Control"
+      override = true
+      value    = var.static_assets_cache_custom_headers_config_value
+    }
+  }
+}
+
 resource "aws_cloudfront_distribution" "s3_distribution" {
   origin {
     domain_name = var.secure_s3_origin ? aws_s3_bucket.b.bucket_regional_domain_name : aws_s3_bucket_website_configuration.b.website_endpoint
@@ -220,6 +234,38 @@ resource "aws_cloudfront_distribution" "s3_distribution" {
     default_ttl            = var.default_ttl
     max_ttl                = var.max_ttl
     compress               = var.compress
+  }
+
+  # Dynamic cache behaviors dla zasobów statycznych
+  dynamic "ordered_cache_behavior" {
+    for_each = var.static_assets_cache_ordered_cache_behaviors
+    iterator = i
+    content {
+      path_pattern     = i.value.path_pattern
+      allowed_methods  = ["GET", "HEAD", "OPTIONS"]
+      cached_methods   = ["GET", "HEAD"]
+      target_origin_id = var.s3_origin_id
+
+      response_headers_policy_id = length(aws_cloudfront_response_headers_policy.static_assets_cache) > 0 ? aws_cloudfront_response_headers_policy.static_assets_cache[0].id : ""
+      cache_policy_id = var.cache_policy_id
+      origin_request_policy_id = var.request_policy_id
+
+      dynamic "forwarded_values" {
+        for_each = length(var.cache_policy_id) > 0 ? [] : [1]
+        content {
+          query_string = false
+          cookies {
+            forward = "none"
+          }
+        }
+      }
+
+      viewer_protocol_policy = "redirect-to-https"
+      min_ttl                = i.value.ttl != null ? i.value.ttl : (i.value.min_ttl != null ? i.value.min_ttl : var.min_ttl)
+      default_ttl            = i.value.ttl != null ? i.value.ttl : (i.value.default_ttl != null ? i.value.default_ttl : var.default_ttl)
+      max_ttl                = i.value.ttl != null ? i.value.ttl : (i.value.max_ttl != null ? i.value.max_ttl : var.max_ttl)
+      compress               = var.compress
+    }
   }
 
   price_class = var.price_class

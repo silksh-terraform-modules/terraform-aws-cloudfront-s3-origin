@@ -190,3 +190,21 @@ variable "bucket_noncurrent_version_expiration_days" {
   default = 90
   
 }
+
+variable "static_assets_cache_ordered_cache_behaviors" {
+  description = "List of ordered cache behaviors for specific path patterns"
+  type = list(object({
+    path_pattern = string
+    ttl          = optional(number)
+    min_ttl      = optional(number)
+    default_ttl  = optional(number)
+    max_ttl      = optional(number)
+  }))
+  default = []
+}
+
+variable "static_assets_cache_custom_headers_config_value" {
+  description = "Value for Cache-Control header in static assets cache policy"
+  type        = string
+  default     = "public, max-age=31536000, immutable"
+}
